@@ -125,7 +125,9 @@ public class RedisService {
             return (T) Integer.valueOf(str);
         }else if (clazz == long.class || clazz == Long.class){
             return (T)Long.valueOf(str);
-        }else{
+        }else if(clazz == String.class){
+            return (T)str;
+        } else{
             return JSON.toJavaObject(JSON.parseObject(str),clazz);
         }
     }
@@ -137,6 +139,22 @@ public class RedisService {
     private void returnToPool(Jedis jedis){
         if (jedis != null){
             jedis.close();
+        }
+    }
+
+    public boolean delete(KeyPrefix prefix, String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            //生成真正的key
+            String realKey  = prefix.getPrefix() + key;
+            long ret = jedis.del(realKey);
+            return ret >0;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }finally {
+            returnToPool(jedis);
         }
     }
 }

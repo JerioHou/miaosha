@@ -31,10 +31,33 @@ public class MiaoshaUserService {
 
 
     public MiaoshaUser getById(long id) {
-        return miaoshaUserDao.getById(id);
+        MiaoshaUser user = redisService.get(MiaoshaUserKey.getUserById,""+id, MiaoshaUser.class);
+        if (user != null){
+            return user;
+        }
+        user = miaoshaUserDao.getById(id);
+        redisService.set(MiaoshaUserKey.getUserById,""+id,user);
+        return user;
     }
 
-    public boolean login(HttpServletResponse response, LoginVo loginVo) {
+    public boolean updatePassword(String token,long id,String formPass){
+        MiaoshaUser user = getById(id);
+        if (user == null){
+            throw new GlobalException(CodeMsg.MOBILE_NOT_EXIST);
+        }
+        MiaoshaUser toBeUpdateUser = new MiaoshaUser();
+        toBeUpdateUser.setId(id);
+        toBeUpdateUser.setPassword(MD5Util.formPassToDBPass(formPass,user.getSalt()));
+        miaoshaUserDao.updatePass(toBeUpdateUser);
+
+        //更新缓存
+        redisService.delete(MiaoshaUserKey.getUserById,""+id);
+        user.setPassword(toBeUpdateUser.getPassword());
+        redisService.set(MiaoshaUserKey.getUserById,""+id,user);
+        return true;
+    }
+
+    public String login(HttpServletResponse response, LoginVo loginVo) {
         if(loginVo == null) {
             throw new GlobalException(CodeMsg.SERVER_ERROR);
         }
@@ -55,7 +78,7 @@ public class MiaoshaUserService {
         //生成token
         String token = UUIDUtil.uuid();
         addCookie(response, token, user);
-        return true;
+        return token;
     }
 
     public MiaoshaUser getByToken(HttpServletResponse response, String token) {
