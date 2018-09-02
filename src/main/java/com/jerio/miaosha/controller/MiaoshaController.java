@@ -1,5 +1,6 @@
 package com.jerio.miaosha.controller;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.jerio.miaosha.domain.MiaoshaOrder;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.domain.OrderInfo;
@@ -20,6 +21,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
+import java.io.OutputStream;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,6 +58,8 @@ public class MiaoshaController implements InitializingBean {
 
     private HashMap<Long, Integer> localOverMap =  new HashMap<Long, Integer>();
     private AtomicInteger times = new AtomicInteger(0);
+    final RateLimiter limiter = RateLimiter.create(200.0);//每秒放入200个token
+
     /**
      * 系统初始化
      * */
@@ -92,20 +101,22 @@ public class MiaoshaController implements InitializingBean {
 //        return "order_detail";
 //    }
 //
-    @RequestMapping(value="/do_miaosha", method= RequestMethod.POST)
+    @RequestMapping(value="/{path}/do_miaosha", method= RequestMethod.POST)
     @ResponseBody
     public Result<Integer> miaosha(Model model,MiaoshaUser user,
+                                   @PathVariable("path")String path,
                                    @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
         if(user == null) {
             System.out.println("用户不存在");
             return Result.error(CodeMsg.SESSION_ERROR);
         }
-        //验证path
-//        boolean check = miaoshaService.checkPath(user, goodsId, path);
-//        if(!check){
-//            return Result.error(CodeMsg.REQUEST_ILLEGAL);
-//        }
+
+//        验证path
+        boolean check = miaoshaService.checkPath(user, goodsId, path);
+        if(!check){
+            return Result.error(CodeMsg.REQUEST_ILLEGAL);
+        }
         //内存标记，减少redis访问
         times.incrementAndGet();
         if(times.get() > localOverMap.get(goodsId)) {
@@ -128,5 +139,75 @@ public class MiaoshaController implements InitializingBean {
         mm.setGoodsId(goodsId);
         sender.sendMiaoshaMessage(mm);
         return Result.success(0);//排队中
+    }
+
+    @RequestMapping(value="/verifyCode", method=RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
+                                              @RequestParam("goodsId")long goodsId) {
+        if(user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        try {
+            BufferedImage image  = miaoshaService.createVerifyCode(user, goodsId);
+            OutputStream out = response.getOutputStream();
+            ImageIO.write(image, "JPEG", out);
+            out.flush();
+            out.close();
+            return null;
+        }catch(Exception e) {
+            e.printStackTrace();
+            return Result.error(CodeMsg.MIAOSHA_FAIL);
+        }
+    }
+
+//    @AccessLimit(seconds=5, maxCount=5, needLogin=true)
+    @RequestMapping(value="/path", method=RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getMiaoshaPath(HttpServletRequest request, MiaoshaUser user,
+                                         @RequestParam("goodsId")long goodsId,
+                                         @RequestParam(value="verifyCode", defaultValue="0")int verifyCode
+    ) {
+        if(user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+
+        if(!limiter.tryAcquire()) { //未请求到limiter则立即返回false
+            return Result.error(CodeMsg.TOO_MANY_REQUIRES);
+        }
+
+        //验证秒杀是否开始
+        //未开始 或 已结束，都不暴露秒杀地址
+        GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
+        Date endTime = goods.getEndDate();
+        Date startTime = goods.getStartDate();
+        Date nowTime = new Date();
+        if (endTime.getTime() < nowTime.getTime() || startTime.getTime() > nowTime.getTime()){
+            return Result.error(CodeMsg.REQUEST_ILLEGAL);
+        }
+
+        boolean check = miaoshaService.checkVerifyCode(user, goodsId, verifyCode);
+        if(!check) {
+            return Result.error(CodeMsg.REQUEST_ILLEGAL);
+        }
+        String path  =miaoshaService.createMiaoshaPath(user, goodsId);
+        return Result.success(path);
+    }
+
+    /**
+     * orderId：成功
+     * -1：秒杀失败
+     * 0： 排队中
+     * */
+    @RequestMapping(value="/result", method=RequestMethod.GET)
+    @ResponseBody
+    public Result<Long> miaoshaResult(Model model,MiaoshaUser user,
+                                      @RequestParam("goodsId")long goodsId) {
+        model.addAttribute("user", user);
+        if(user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        long result  =miaoshaService.getMiaoshaResult(user.getId(), goodsId);
+        return Result.success(result);
     }
 }

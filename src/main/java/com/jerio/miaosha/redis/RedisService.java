@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import static org.apache.naming.SelectorContext.prefix;
+
 /**
  * Created by Jerio on 2018/3/12.
  */
@@ -150,6 +152,21 @@ public class RedisService {
             String realKey  = prefix.getPrefix() + key;
             long ret = jedis.del(realKey);
             return ret >0;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }finally {
+            returnToPool(jedis);
+        }
+    }
+
+    public boolean exists(MiaoshaKey prefix, String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            //生成真正的key
+            String realKey  = prefix.getPrefix() + key;
+            return jedis.exists(realKey);
         }catch (Exception e){
             e.printStackTrace();
             return false;
