@@ -1,5 +1,6 @@
 package com.jerio.miaosha.config;
 
+import com.jerio.miaosha.Access.UserHolder;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.service.MiaoshaUserService;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +33,10 @@ public class UserArgumentResolver implements HandlerMethodArgumentResolver{
     @Override
     public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer modelAndViewContainer,
           NativeWebRequest nativeWebRequest, WebDataBinderFactory webDataBinderFactory) throws Exception {
+        /*
+         *  写法一
+         *
+
         HttpServletRequest request = nativeWebRequest.getNativeRequest(HttpServletRequest.class);
         HttpServletResponse response = nativeWebRequest.getNativeResponse(HttpServletResponse.class);
         String paramToken = request.getParameter(MiaoshaUserService.COOKI_NAME_TOKEN);
@@ -41,18 +46,10 @@ public class UserArgumentResolver implements HandlerMethodArgumentResolver{
         }
         String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
         return miaoshaUserService.getByToken(response, token);
-    }
 
-    private String getCookieValue(HttpServletRequest request, String cookiNameToken) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null || cookies.length == 0){
-            return null;
-        }
-        for (Cookie cookie : cookies){
-            if (cookie.getName().equals(cookiNameToken)){
-                return cookie.getValue();
-            }
-        }
-        return null;
+        */
+
+        //写法2  使用ThreadLocal
+        return UserHolder.getUser();
     }
 }

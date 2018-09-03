@@ -1,6 +1,7 @@
 package com.jerio.miaosha.controller;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaOrder;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.domain.OrderInfo;
@@ -161,7 +162,7 @@ public class MiaoshaController implements InitializingBean {
         }
     }
 
-//    @AccessLimit(seconds=5, maxCount=5, needLogin=true)
+    @AccessLimit
     @RequestMapping(value="/path", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaPath(HttpServletRequest request, MiaoshaUser user,

@@ -1,5 +1,6 @@
 package com.jerio.miaosha.controller;
 
+import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.domain.OrderInfo;
 import com.jerio.miaosha.redis.RedisService;
@@ -36,6 +37,7 @@ public class OrderController {
     @Autowired
     GoodsService goodsService;
 
+    @AccessLimit
     @RequestMapping("/detail")
     @ResponseBody
     public Result<OrderDetailVo> info(Model model, MiaoshaUser user,
