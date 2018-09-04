@@ -2,8 +2,6 @@ package com.jerio.miaosha.Access;
 
 import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
-import com.jerio.miaosha.redis.MiaoshaUserKey;
-import com.jerio.miaosha.redis.RedisService;
 import com.jerio.miaosha.service.MiaoshaUserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +26,7 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 
-        //对于带有 @AccessLimit 朱姐 needLogin = true 的方法
+        //对于带有 @AccessLimit注解 needLogin = true 的方法
         //获取用户信息
         if (handler instanceof HandlerMethod){
             HandlerMethod  hm = (HandlerMethod) handler;

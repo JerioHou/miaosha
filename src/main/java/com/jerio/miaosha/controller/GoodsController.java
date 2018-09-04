@@ -1,5 +1,6 @@
 package com.jerio.miaosha.controller;
 
+import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.redis.GoodsKey;
 import com.jerio.miaosha.redis.RedisService;
@@ -62,6 +63,7 @@ public class GoodsController {
         return html;
     }
 
+    @AccessLimit
     @RequestMapping(value="/detail/{goodsId}")
     @ResponseBody
     public Result<GoodsDetailVo> detail(HttpServletRequest request, HttpServletResponse response, Model model, MiaoshaUser user,

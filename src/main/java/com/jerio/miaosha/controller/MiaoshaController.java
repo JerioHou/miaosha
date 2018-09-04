@@ -142,6 +142,7 @@ public class MiaoshaController implements InitializingBean {
         return Result.success(0);//排队中
     }
 
+    @AccessLimit
     @RequestMapping(value="/verifyCode", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
@@ -200,6 +201,7 @@ public class MiaoshaController implements InitializingBean {
      * -1：秒杀失败
      * 0： 排队中
      * */
+    @AccessLimit
     @RequestMapping(value="/result", method=RequestMethod.GET)
     @ResponseBody
     public Result<Long> miaoshaResult(Model model,MiaoshaUser user,
