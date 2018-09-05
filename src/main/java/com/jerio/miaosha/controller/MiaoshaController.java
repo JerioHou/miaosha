@@ -59,7 +59,6 @@ public class MiaoshaController implements InitializingBean {
 
     private HashMap<Long, Integer> localOverMap =  new HashMap<Long, Integer>();
     private AtomicInteger times = new AtomicInteger(0);
-    final RateLimiter limiter = RateLimiter.create(200.0);//每秒放入200个token
 
     /**
      * 系统初始化
@@ -142,7 +141,6 @@ public class MiaoshaController implements InitializingBean {
         return Result.success(0);//排队中
     }
 
-    @AccessLimit
     @RequestMapping(value="/verifyCode", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
@@ -174,10 +172,6 @@ public class MiaoshaController implements InitializingBean {
             return Result.error(CodeMsg.SESSION_ERROR);
         }
 
-        if(!limiter.tryAcquire()) { //未请求到limiter则立即返回false
-            return Result.error(CodeMsg.TOO_MANY_REQUIRES);
-        }
-
         //验证秒杀是否开始
         //未开始 或 已结束，都不暴露秒杀地址
         GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
@@ -201,7 +195,6 @@ public class MiaoshaController implements InitializingBean {
      * -1：秒杀失败
      * 0： 排队中
      * */
-    @AccessLimit
     @RequestMapping(value="/result", method=RequestMethod.GET)
     @ResponseBody
     public Result<Long> miaoshaResult(Model model,MiaoshaUser user,

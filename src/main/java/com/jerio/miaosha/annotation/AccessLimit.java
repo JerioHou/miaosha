@@ -13,5 +13,5 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target(METHOD)
 public @interface AccessLimit {
 
-    boolean needLogin() default true;
+    boolean rateLimiter() default true;
 }

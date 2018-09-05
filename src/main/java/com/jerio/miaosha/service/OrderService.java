@@ -6,6 +6,7 @@ import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.domain.OrderInfo;
 import com.jerio.miaosha.redis.OrderKey;
 import com.jerio.miaosha.redis.RedisService;
+import com.jerio.miaosha.util.IdGenerator;
 import com.jerio.miaosha.vo.GoodsVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ public class OrderService {
     OrderDao orderDao;
     @Autowired
     RedisService redisService;
+    public static final IdGenerator idGenerator = new IdGenerator(0,0);
+
 
     public MiaoshaOrder getMiaoshaOrderByUserIdGoodsId(long userId, long goodsId) {
 //        return orderDao.getMiaoshaOrderByUserIdGoodsId(userId, goodsId);
@@ -33,6 +36,7 @@ public class OrderService {
     @Transactional
     public OrderInfo createOrder(MiaoshaUser user, GoodsVo goods) {
         OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(idGenerator.nextId());
         orderInfo.setCreateDate(new Date());
         orderInfo.setDeliveryAddrId(0L);
         orderInfo.setGoodsCount(1);
@@ -44,6 +48,7 @@ public class OrderService {
         orderInfo.setUserId(user.getId());
         orderDao.insert(orderInfo);
         MiaoshaOrder miaoshaOrder = new MiaoshaOrder();
+        miaoshaOrder.setId(idGenerator.nextId());
         miaoshaOrder.setGoodsId(goods.getId());
         miaoshaOrder.setOrderId(orderInfo.getId());
         miaoshaOrder.setUserId(user.getId());

@@ -1,7 +1,11 @@
 package com.jerio.miaosha.Access;
 
+import com.alibaba.fastjson.JSON;
+import com.google.common.util.concurrent.RateLimiter;
 import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
+import com.jerio.miaosha.result.CodeMsg;
+import com.jerio.miaosha.result.Result;
 import com.jerio.miaosha.service.MiaoshaUserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +16,14 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
 
 /**
  * Created by Jerio on 2018/9/3
  */
 @Service
 public class AccessInterceptor extends HandlerInterceptorAdapter {
+    final RateLimiter limiter = RateLimiter.create(200.0);//每秒放入200个token
 
     @Autowired
     private MiaoshaUserService userService;
@@ -25,18 +31,21 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
     //拦截请求，根据token获取用户信息
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-
-        //对于带有 @AccessLimit注解 needLogin = true 的方法
         //获取用户信息
+        MiaoshaUser miaoshaUser = getUser(request,response);
+        if (miaoshaUser != null){
+            UserHolder.setUser(miaoshaUser);
+        }
+        //对于带有 @AccessLimit注解 rateLimiter = true 的方法,接口限流
         if (handler instanceof HandlerMethod){
             HandlerMethod  hm = (HandlerMethod) handler;
             AccessLimit accessLimit = hm.getMethodAnnotation(AccessLimit.class);
-            if(accessLimit !=null && accessLimit.needLogin()){
-                MiaoshaUser miaoshaUser = getUser(request,response);
-                if (miaoshaUser == null){
+            if(accessLimit !=null && accessLimit.rateLimiter()){
+                if(!limiter.tryAcquire()) {
+                    //未请求到limiter则立即返回false
+                    render(response, CodeMsg.ACCESS_LIMIT_REACHED);
                     return false;
                 }
-                UserHolder.setUser(miaoshaUser);
             }
         }
         return true;
@@ -66,5 +75,14 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
             }
         }
         return null;
+    }
+
+    private void render(HttpServletResponse response, CodeMsg cm)throws Exception {
+        response.setContentType("application/json;charset=UTF-8");
+        OutputStream out = response.getOutputStream();
+        String str  = JSON.toJSONString(Result.error(cm));
+        out.write(str.getBytes("UTF-8"));
+        out.flush();
+        out.close();
     }
 }
