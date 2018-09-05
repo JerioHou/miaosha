@@ -1,4 +1,4 @@
-package com.jerio.miaosha.Access;
+package com.jerio.miaosha.access;
 
 import com.jerio.miaosha.domain.MiaoshaUser;
 

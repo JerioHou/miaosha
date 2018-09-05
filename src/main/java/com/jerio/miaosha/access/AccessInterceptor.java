@@ -1,4 +1,4 @@
-package com.jerio.miaosha.Access;
+package com.jerio.miaosha.access;
 
 import com.alibaba.fastjson.JSON;
 import com.google.common.util.concurrent.RateLimiter;
@@ -44,20 +44,16 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
                 return true;
             }
             //校验登录状态
-            if (accessLimit.needLogin()){
-                if(miaoshaUser == null) {
-                    //未请求到limiter则立即返回false
-                    render(response, CodeMsg.SESSION_ERROR);
-                    return false;
-                }
+            if (accessLimit.needLogin() && miaoshaUser == null){
+                //有AccessLimit注解的接口 需要登录
+                render(response, CodeMsg.SESSION_ERROR);
+                return false;
             }
             //接口限流
-            if (accessLimit.rateLimiter()){
-                if(!limiter.tryAcquire()) {
-                    //未请求到limiter则立即返回false
-                    render(response, CodeMsg.TOO_MANY_REQUIRES);
-                    return false;
-                }
+            if (accessLimit.rateLimiter() && !limiter.tryAcquire()){
+                //未请求到limiter则立即返回false
+                render(response, CodeMsg.TOO_MANY_REQUIRES);
+                return false;
             }
         }
         return true;

@@ -1,6 +1,6 @@
 package com.jerio.miaosha.config;
 
-import com.jerio.miaosha.Access.AccessInterceptor;
+import com.jerio.miaosha.access.AccessInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
