@@ -1,5 +1,6 @@
 package com.jerio.miaosha.controller;
 
+import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
 import com.jerio.miaosha.domain.OrderInfo;
 import com.jerio.miaosha.redis.RedisService;
@@ -36,13 +37,14 @@ public class OrderController {
     @Autowired
     GoodsService goodsService;
 
+    @AccessLimit
     @RequestMapping("/detail")
     @ResponseBody
     public Result<OrderDetailVo> info(Model model, MiaoshaUser user,
                                       @RequestParam("orderId") long orderId) {
-        if(user == null) {
-            return Result.error(CodeMsg.SESSION_ERROR);
-        }
+//        if(user == null) {
+//            return Result.error(CodeMsg.SESSION_ERROR);
+//        }
         OrderInfo order = orderService.getOrderById(orderId);
         if(order == null) {
             return Result.error(CodeMsg.ORDER_NOT_EXIST);

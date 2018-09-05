@@ -72,43 +72,16 @@ public class MiaoshaController implements InitializingBean {
         }
     }
 
-//    @RequestMapping("/do_miaosha")
-//    public String list(Model model, MiaoshaUser user,
-//                       @RequestParam("goodsId")long goodsId) {
-//        model.addAttribute("user", user);
-//        if(user == null) {
-//            return "login";
-//        }
-//        //判断库存
-//        GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
-//        int stock = goods.getStockCount();
-//        if(stock <= 0) {
-//            model.addAttribute("errmsg", CodeMsg.MIAO_SHA_OVER.getMsg());
-//            return "miaosha_fail";
-//        }
-//        //判断是否已经秒杀到了
-//        MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(user.getId(), goodsId);
-//        if(order != null) {
-//            model.addAttribute("errmsg", CodeMsg.REPEATE_MIAOSHA.getMsg());
-//            return "miaosha_fail";
-//        }
-//        //减库存 下订单 写入秒杀订单
-//        OrderInfo orderInfo = miaoshaService.miaosha(user, goods);
-//        model.addAttribute("orderInfo", orderInfo);
-//        model.addAttribute("goods", goods);
-//        return "order_detail";
-//    }
-//
+    @AccessLimit
     @RequestMapping(value="/{path}/do_miaosha", method= RequestMethod.POST)
     @ResponseBody
     public Result<Integer> miaosha(Model model,MiaoshaUser user,
                                    @PathVariable("path")String path,
                                    @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
-        if(user == null) {
-            System.out.println("用户不存在");
-            return Result.error(CodeMsg.SESSION_ERROR);
-        }
+//        if(user == null) {
+//            return Result.error(CodeMsg.SESSION_ERROR);
+//        }
 
 //        验证path
         boolean check = miaoshaService.checkPath(user, goodsId, path);
@@ -139,13 +112,14 @@ public class MiaoshaController implements InitializingBean {
         return Result.success(0);//排队中
     }
 
+    @AccessLimit
     @RequestMapping(value="/verifyCode", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
                                               @RequestParam("goodsId")long goodsId) {
-        if(user == null) {
-            return Result.error(CodeMsg.SESSION_ERROR);
-        }
+//        if(user == null) {
+//            return Result.error(CodeMsg.SESSION_ERROR);
+//        }
         try {
             BufferedImage image  = miaoshaService.createVerifyCode(user, goodsId);
             OutputStream out = response.getOutputStream();
@@ -193,14 +167,15 @@ public class MiaoshaController implements InitializingBean {
      * -1：秒杀失败
      * 0： 排队中
      * */
+    @AccessLimit
     @RequestMapping(value="/result", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> miaoshaResult(Model model,MiaoshaUser user,
                                       @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
-        if(user == null) {
-            return Result.error(CodeMsg.SESSION_ERROR);
-        }
+//        if(user == null) {
+//            return Result.error(CodeMsg.SESSION_ERROR);
+//        }
         long result  =miaoshaService.getMiaoshaResult(user.getId(), goodsId);
         //long类型在前端会出现精度丢失问题，故采用string类型传输
         return Result.success(String.valueOf(result));
