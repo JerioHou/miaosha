@@ -1,10 +1,8 @@
 package com.jerio.miaosha.controller;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaOrder;
 import com.jerio.miaosha.domain.MiaoshaUser;
-import com.jerio.miaosha.domain.OrderInfo;
 import com.jerio.miaosha.rabbitmq.MQSender;
 import com.jerio.miaosha.rabbitmq.MiaoshaMessage;
 import com.jerio.miaosha.redis.GoodsKey;
@@ -161,7 +159,7 @@ public class MiaoshaController implements InitializingBean {
         }
     }
 
-    @AccessLimit
+    @AccessLimit(rateLimiter = true)
     @RequestMapping(value="/path", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaPath(HttpServletRequest request, MiaoshaUser user,
@@ -197,13 +195,14 @@ public class MiaoshaController implements InitializingBean {
      * */
     @RequestMapping(value="/result", method=RequestMethod.GET)
     @ResponseBody
-    public Result<Long> miaoshaResult(Model model,MiaoshaUser user,
+    public Result<String> miaoshaResult(Model model,MiaoshaUser user,
                                       @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
         if(user == null) {
             return Result.error(CodeMsg.SESSION_ERROR);
         }
         long result  =miaoshaService.getMiaoshaResult(user.getId(), goodsId);
-        return Result.success(result);
+        //long类型在前端会出现精度丢失问题，故采用string类型传输
+        return Result.success(String.valueOf(result));
     }
 }

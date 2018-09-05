@@ -40,10 +40,22 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
         if (handler instanceof HandlerMethod){
             HandlerMethod  hm = (HandlerMethod) handler;
             AccessLimit accessLimit = hm.getMethodAnnotation(AccessLimit.class);
-            if(accessLimit !=null && accessLimit.rateLimiter()){
+            if (accessLimit ==null){
+                return true;
+            }
+            //校验登录状态
+            if (accessLimit.needLogin()){
+                if(miaoshaUser == null) {
+                    //未请求到limiter则立即返回false
+                    render(response, CodeMsg.SESSION_ERROR);
+                    return false;
+                }
+            }
+            //接口限流
+            if (accessLimit.rateLimiter()){
                 if(!limiter.tryAcquire()) {
                     //未请求到limiter则立即返回false
-                    render(response, CodeMsg.ACCESS_LIMIT_REACHED);
+                    render(response, CodeMsg.TOO_MANY_REQUIRES);
                     return false;
                 }
             }
