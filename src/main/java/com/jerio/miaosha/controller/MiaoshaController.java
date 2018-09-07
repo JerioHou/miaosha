@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by Jerio on 2018/3/20.
+ * Created by Jerio on 2018/3/20
  */
 @Controller
 @RequestMapping("/miaosha")
@@ -146,8 +146,7 @@ public class MiaoshaController implements InitializingBean {
     @ResponseBody
     public Result<String> getMiaoshaPath(HttpServletRequest request, MiaoshaUser user,
                                          @RequestParam("goodsId")long goodsId,
-                                         @RequestParam(value="verifyCode", defaultValue="0")int verifyCode
-    ) {
+                                         @RequestParam(value="verifyCode", defaultValue="0")int verifyCode) {
         if(user == null) {
             return Result.error(CodeMsg.SESSION_ERROR);
         }
@@ -182,7 +181,7 @@ public class MiaoshaController implements InitializingBean {
                                       @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
 
-        long result  =miaoshaService.getMiaoshaResult(user.getId(), goodsId);
+        long result  = miaoshaService.getMiaoshaResult(user.getId(), goodsId);
         //long类型在前端会出现精度丢失问题，故采用string类型传输
         return Result.success(String.valueOf(result));
     }
