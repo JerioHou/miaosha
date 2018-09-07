@@ -55,8 +55,7 @@ public class MiaoshaController implements InitializingBean {
     @Autowired
     MQSender sender;
 
-    private HashMap<Long, Integer> localOverMap =  new HashMap<Long, Integer>();
-    private AtomicInteger times = new AtomicInteger(0);
+    private HashMap<Long, Boolean> localOverMap =  new HashMap<Long, Boolean>();
 
     /**
      * 系统初始化
@@ -68,7 +67,7 @@ public class MiaoshaController implements InitializingBean {
         }
         for(GoodsVo goods : goodsList) {
             redisService.set(GoodsKey.getMiaoshaGoodsStock, ""+goods.getId(), goods.getStockCount());
-            localOverMap.put(goods.getId(), goods.getStockCount());
+            localOverMap.put(goods.getId(), false);
         }
     }
 
@@ -79,18 +78,22 @@ public class MiaoshaController implements InitializingBean {
                                    @PathVariable("path")String path,
                                    @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
-//        if(user == null) {
-//            return Result.error(CodeMsg.SESSION_ERROR);
-//        }
 
-//        验证path
+        //验证path
         boolean check = miaoshaService.checkPath(user, goodsId, path);
         if(!check){
             return Result.error(CodeMsg.REQUEST_ILLEGAL);
         }
-        //内存标记，减少redis访问
-        times.incrementAndGet();
-        if(times.get() > localOverMap.get(goodsId)) {
+        /*
+        内存标记，部分减少redis访问
+        hashmap是有线程安全问题的，但是在这里，localOverMap初始化后并不会增加新的key
+        而是不停地对已有的key 覆盖其值。
+        同时如果线程A get操作后被挂起，而线程B修改了localOverMap的值，那么本次修改对线程A不可见.
+        因此会出现秒杀结束但有线程能继续执行下面的代码，特别是线程数量特别多的情况下，
+        所以此处只是部分减少redis请求，但仍能启动一定作用，特别是没有 “预减库存”时，能较大程度较少消息的数量
+        */
+        boolean over = localOverMap.get(goodsId);
+        if(over) {
             return Result.error(CodeMsg.MIAO_SHA_OVER);
         }
         //判断是否已经秒杀到了
@@ -99,9 +102,17 @@ public class MiaoshaController implements InitializingBean {
             return Result.error(CodeMsg.REPEATE_MIAOSHA);
         }
 
-        //预减库存
+        /*
+        预减库存
+        此处会存在少买的可能性，即redis减库存成功，但DB减库存失败
+        预减库存的好处是能极大地较少 消息的数量，提高系统的响应速度。
+        reids是单线程的，所以decr是线程安全的，所以不用担心超卖问题，同时数据库也做了超卖的限制
+
+        如果对库存要求能严格，不能少也不能多，则不能采用这种方式。
+        */
         long stock = redisService.decr(GoodsKey.getMiaoshaGoodsStock, ""+goodsId);//10
         if(stock < 0) {
+            localOverMap.put(goodsId,true);
             return Result.error(CodeMsg.MIAO_SHA_OVER);
         }
         //入队
@@ -117,9 +128,6 @@ public class MiaoshaController implements InitializingBean {
     @ResponseBody
     public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
                                               @RequestParam("goodsId")long goodsId) {
-//        if(user == null) {
-//            return Result.error(CodeMsg.SESSION_ERROR);
-//        }
         try {
             BufferedImage image  = miaoshaService.createVerifyCode(user, goodsId);
             OutputStream out = response.getOutputStream();
@@ -173,9 +181,7 @@ public class MiaoshaController implements InitializingBean {
     public Result<String> miaoshaResult(Model model,MiaoshaUser user,
                                       @RequestParam("goodsId")long goodsId) {
         model.addAttribute("user", user);
-//        if(user == null) {
-//            return Result.error(CodeMsg.SESSION_ERROR);
-//        }
+
         long result  =miaoshaService.getMiaoshaResult(user.getId(), goodsId);
         //long类型在前端会出现精度丢失问题，故采用string类型传输
         return Result.success(String.valueOf(result));
