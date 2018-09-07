@@ -2,6 +2,7 @@ package com.jerio.miaosha.rabbitmq;
 
 import com.jerio.miaosha.domain.MiaoshaOrder;
 import com.jerio.miaosha.domain.MiaoshaUser;
+import com.jerio.miaosha.redis.GoodsKey;
 import com.jerio.miaosha.redis.RedisService;
 import com.jerio.miaosha.service.GoodsService;
 import com.jerio.miaosha.service.MiaoshaService;
@@ -26,6 +27,9 @@ public class MQReciver {
     @Autowired
     MiaoshaService miaoshaService;
 
+    @Autowired
+    RedisService redisService;
+
 
     @RabbitListener(queues = MQConfig.MIAOSHA_QUEUE)
     public void recive(String message){
@@ -34,8 +38,8 @@ public class MQReciver {
         MiaoshaUser user = mm.getUser();
         long goodsId = mm.getGoodsId();
 
-        GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
-        int stock = goods.getStockCount();
+        //再次判断库存
+        int stock = redisService.get(GoodsKey.getMiaoshaGoodsStock, ""+goodsId,Integer.class);//10
         if(stock <= 0) {
             return;
         }
@@ -44,6 +48,7 @@ public class MQReciver {
         if(order != null) {
             return;
         }
+        GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
         //减库存 下订单 写入秒杀订单
         miaoshaService.miaosha(user, goods);
     }
