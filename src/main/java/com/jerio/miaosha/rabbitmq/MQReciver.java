@@ -32,20 +32,20 @@ public class MQReciver {
 
 
     @RabbitListener(queues = MQConfig.MIAOSHA_QUEUE)
-    public void recive(String message){
-      MiaoshaMessage mm =  RedisService.stringToBean(message, MiaoshaMessage.class);
+    public void recive(String message) {
+        MiaoshaMessage mm = RedisService.stringToBean(message, MiaoshaMessage.class);
 
         MiaoshaUser user = mm.getUser();
         long goodsId = mm.getGoodsId();
 
         //再次判断库存
-        int stock = redisService.get(GoodsKey.getMiaoshaGoodsStock, ""+goodsId,Integer.class);//10
-        if(stock <= 0) {
+        int stock = redisService.get(GoodsKey.getMiaoshaGoodsStock, "" + goodsId, Integer.class);
+        if (stock <= 0) {
             return;
         }
         //判断是否已经秒杀到了
         MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(user.getId(), goodsId);
-        if(order != null) {
+        if (order != null) {
             return;
         }
         GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
