@@ -15,4 +15,6 @@ public @interface AccessLimit {
 
     boolean rateLimiter() default false;
     boolean needLogin() default true;
+    String rateLimiterName() default "";
+    double rateLimiterValue() default -1;
 }

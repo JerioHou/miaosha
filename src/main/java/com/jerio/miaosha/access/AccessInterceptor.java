@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.google.common.util.concurrent.RateLimiter;
 import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaUser;
+import com.jerio.miaosha.init.InitRateLimiter;
 import com.jerio.miaosha.result.CodeMsg;
 import com.jerio.miaosha.result.Result;
 import com.jerio.miaosha.service.MiaoshaUserService;
@@ -23,7 +24,6 @@ import java.io.OutputStream;
  */
 @Service
 public class AccessInterceptor extends HandlerInterceptorAdapter {
-    final RateLimiter limiter = RateLimiter.create(200.0);//每秒放入200个token
 
     @Autowired
     private MiaoshaUserService userService;
@@ -49,11 +49,14 @@ public class AccessInterceptor extends HandlerInterceptorAdapter {
                 render(response, CodeMsg.SESSION_ERROR);
                 return false;
             }
+
             //接口限流
-            if (accessLimit.rateLimiter() && !limiter.tryAcquire()){
-                //未请求到limiter则立即返回false
-                render(response, CodeMsg.TOO_MANY_REQUIRES);
-                return false;
+            if (accessLimit.rateLimiter() && !StringUtils.isEmpty(accessLimit.rateLimiterName())
+                    && accessLimit.rateLimiterValue() > 0) {
+                if (!InitRateLimiter.getRateLimiter(accessLimit.rateLimiterName()).tryAcquire()){
+                    render(response, CodeMsg.TOO_MANY_REQUIRES);
+                    return  false;
+                }
             }
         }
         return true;

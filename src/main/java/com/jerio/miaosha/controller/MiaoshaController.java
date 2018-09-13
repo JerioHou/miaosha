@@ -141,7 +141,7 @@ public class MiaoshaController implements InitializingBean {
         }
     }
 
-    @AccessLimit(rateLimiter = true)
+    @AccessLimit(rateLimiter = true,rateLimiterName = "getMiaoshaPath",rateLimiterValue = 200.0)
     @RequestMapping(value="/path", method=RequestMethod.GET)
     @ResponseBody
     public Result<String> getMiaoshaPath(HttpServletRequest request, MiaoshaUser user,
