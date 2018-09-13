@@ -24,9 +24,9 @@ import java.util.List;
 @Component
 public class InitRateLimiter implements CommandLineRunner {
 
-    @Value("rateLimiter.package")
+    @Value("${rateLimiter.package}")
     private String packageName;
-
+    //不允许修改，只提供get方法
     private static final HashMap<String,RateLimiter> rateLimiterMap = new HashMap<String,RateLimiter>();
 
     public static RateLimiter getRateLimiter(String rateLimiterName) {
@@ -52,6 +52,7 @@ public class InitRateLimiter implements CommandLineRunner {
             //遍历函数
             for (Method method : methods) {
                 AccessLimit accessLimit = AnnotationUtil.getAnnotationValueByMethod(method, AccessLimit.class);
+                //开启限流 且 限流器名字不为空 且 限流速率 > 0
                 if (accessLimit !=null && accessLimit.rateLimiter()
                         && !StringUtils.isEmpty(accessLimit.rateLimiterName())
                         && accessLimit.rateLimiterValue() > 0) {
