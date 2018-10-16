@@ -2,8 +2,11 @@ package com.jerio.miaosha.init;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.jerio.miaosha.annotation.AccessLimit;
+import com.jerio.miaosha.service.GoodsService;
 import com.jerio.miaosha.util.AnnotationUtil;
 import com.jerio.miaosha.util.ClassUtil;
+import com.jerio.miaosha.vo.GoodsVo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -12,6 +15,7 @@ import org.springframework.util.StringUtils;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Franky on 2018/09/13
@@ -26,6 +30,18 @@ public class InitRateLimiter implements CommandLineRunner {
 
     @Value("${rateLimiter.package}")
     private String packageName;
+
+    @Autowired
+    GoodsService goodsService;
+    
+    private static final HashMap<Long,AtomicInteger> atomicCountMap = new HashMap();
+
+    public static AtomicInteger getGoodAtomicInteger(Long goodid) {
+
+        return atomicCountMap.get(goodid);
+    }
+
+
     //不允许修改，只提供get方法
     private static final HashMap<String,RateLimiter> rateLimiterMap = new HashMap<String,RateLimiter>();
 
@@ -37,6 +53,16 @@ public class InitRateLimiter implements CommandLineRunner {
     @Override
     public void run(String... strings) throws Exception {
         loadRateLimiter();
+        loadAtomicCount();
+    }
+
+    private void loadAtomicCount() {
+        //查询秒杀商品信息
+        final List<GoodsVo> goodsVos = goodsService.listGoodsVo();
+        for (GoodsVo good : goodsVos){
+            // 初始化商品数量为2倍
+            atomicCountMap.put(good.getId(),new AtomicInteger(good.getStockCount()*2));
+        }
     }
 
     private void loadRateLimiter() {

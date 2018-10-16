@@ -3,6 +3,7 @@ package com.jerio.miaosha.controller;
 import com.jerio.miaosha.annotation.AccessLimit;
 import com.jerio.miaosha.domain.MiaoshaOrder;
 import com.jerio.miaosha.domain.MiaoshaUser;
+import com.jerio.miaosha.init.InitRateLimiter;
 import com.jerio.miaosha.rabbitmq.MQSender;
 import com.jerio.miaosha.rabbitmq.MiaoshaMessage;
 import com.jerio.miaosha.redis.GoodsKey;
@@ -28,8 +29,6 @@ import java.io.OutputStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Jerio on 2018/3/20
@@ -84,6 +83,10 @@ public class MiaoshaController implements InitializingBean {
         if(!check){
             return Result.error(CodeMsg.REQUEST_ILLEGAL);
         }
+        // 使用AtomicInteger预减库存
+        if(InitRateLimiter.getGoodAtomicInteger(goodsId).decrementAndGet() < 1)
+            return Result.error(CodeMsg.MIAO_SHA_OVER);
+
         /*
         内存标记，部分减少redis访问
         hashmap是有线程安全问题的，但是在这里，localOverMap初始化后并不会增加新的key
@@ -92,10 +95,10 @@ public class MiaoshaController implements InitializingBean {
         因此会出现秒杀结束但有线程能继续执行下面的代码，特别是线程数量特别多的情况下，
         所以此处只是部分减少redis请求，但仍能启动一定作用，特别是没有 “预减库存”时，能较大程度较少消息的数量
         */
-        boolean over = localOverMap.get(goodsId);
-        if(over) {
-            return Result.error(CodeMsg.MIAO_SHA_OVER);
-        }
+//        boolean over = localOverMap.get(goodsId);
+//        if(over) {
+//            return Result.error(CodeMsg.MIAO_SHA_OVER);
+//        }
         //判断是否已经秒杀到了
         MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(user.getId(), goodsId);
         if(order != null) {
